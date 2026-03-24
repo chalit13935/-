@@ -31,6 +31,7 @@
         <li class="nav-link" onclick="setGroup(5)">👤 กลุ่มที่ 5</li>
     </ul>
     <hr>
+    <button class="btn btn-info btn-sm text-white mb-2" onclick="showDashboard()">📊 แดสบอร์ดสรุปผล</button>
     <button class="btn btn-warning btn-sm" onclick="showDeptMenu()">📦 เมนูสำหรับแผนก (แก้ไขงาน)</button>
 </div>
 
@@ -100,7 +101,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4GAkoaHJmuI4LkUw6ryJrfPLe8LXilRBihNRYQ1F8oeS1wVTnR1qJKoTDrhAqih7t/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoIVDachZpGOsO8gyjMSS1zkpMS0xgAXv65wWOH5hqwwqQN52OB-302NeyeXlkm4cQ/exec"; 
     var currentGroup = 0;
 
     function setGroup(id) {
@@ -110,10 +111,93 @@
         document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
         loadPresentationData(id);
     }
+
+
+// เพิ่มฟังก์ชัน Dashboard
+function showDashboard() {
+    document.getElementById('setup-info').style.display = 'none';
+    document.getElementById('inspect-form').style.display = 'block';
+    const formArea = document.getElementById('inspect-form');
+    formArea.innerHTML = '<div class="text-center">กำลังโหลด Dashboard...</div>';
+
+    fetch(SCRIPT_URL + "?action=get_dashboard")
+    .then(res => res.json())
+    .then(data => {
+        let statsHtml = `
+            <h3 class="mb-4 text-primary"><i class="bi bi-speedometer2"></i> Dashboard การแก้ไขงาน</h3>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-warning text-dark p-3">
+                        <h5>งานรอดำเนินการทั้งหมด</h5>
+                        <h2 class="mb-0">${data.total_pending} รายการ</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card p-3 mb-4">
+                <h5>🏆 แผนกที่แก้ไขงานได้เยอะที่สุด</h5>
+                <table class="table mt-2">
+                    <thead><tr><th>แผนก</th><th>จำนวนที่เสร็จ (เคส)</th></tr></thead>
+                    <tbody>`;
+        
+        for (let dept in data.stats) {
+            statsHtml += `<tr><td><b>${dept}</b></td><td><span class="badge bg-success">${data.stats[dept]}</span></td></tr>`;
+        }
+        
+        statsHtml += `</tbody></table></div>
+            <div class="card p-3">
+                <h5>🕒 รายการที่เพิ่งแก้ไขเสร็จ</h5>
+                <ul class="list-group list-group-flush">`;
+        
+        data.recent_success.forEach(item => {
+            statsHtml += `<li class="list-group-item d-flex justify-content-between"><span>แผนก ${item.dept}</span><small class="text-muted">${item.date}</small></li>`;
+        });
+
+        statsHtml += `</ul></div><button class="btn btn-secondary mt-3" onclick="location.reload()">กลับหน้าหลัก</button>`;
+        formArea.innerHTML = statsHtml;
+    });
+}
     
+    // แก้ฟังก์ชัน เมนูแผนก (เพิ่มระบบเลือกรูป 3 รูป)
     function showDeptMenu() {
-        alert('ระบบกำลังดึงข้อมูลงานค้างแก้จาก Google Sheets...');
-    }
+    let deptName = prompt("กรุณาระบุชื่อแผนกของคุณ (เช่น Store, Prod_A, QC):");
+    if (!deptName) return;
+
+    const formArea = document.getElementById('inspect-form');
+    formArea.innerHTML = '<div class="text-center">กำลังดึงข้อมูลงานค้าง...</div>';
+    document.getElementById('setup-info').style.display = 'none';
+    document.getElementById('inspect-form').style.display = 'block';
+
+    fetch(SCRIPT_URL + "?action=dept_read&dept=" + deptName)
+    .then(res => res.json())
+    .then(data => {
+        let html = `<h3 class="mb-3">งานค้างของแผนก: ${deptName}</h3>`;
+        if (data.length === 0) {
+            html += '<div class="alert alert-success">ยินดีด้วย! ไม่มีงานรอดำเนินการ</div><button class="btn btn-secondary" onclick="location.reload()">กลับ</button>';
+        } else {
+            data.forEach(item => {
+                html += `
+                    <div class="card p-3 mb-3 border-warning shadow-sm">
+                        <div class="row">
+                            <div class="col-8">
+                                <span class="badge bg-warning text-dark mb-2">รอดำเนินการ</span>
+                                <p class="mb-1"><b>ปัญหา:</b> ${item.comment}</p>
+                                <small class="text-muted">ประเภท: ${item.type}</small>
+                            </div>
+                            <div class="col-4 text-end">
+                                <img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">
+                            </div>
+                        </div>
+                        <hr>
+                        <label class="form-label small">อัปโหลดรูปแก้ไข (ไม่เกิน 3 รูป):</label>
+                        <input type="file" id="files_${item.row}" class="form-control form-control-sm mb-2" multiple accept="image/*">
+                        <button class="btn btn-success btn-sm w-100" id="btn_${item.row}" onclick="closeJob(${item.row})">📸 ปิดจบงาน</button>
+                    </div>`;
+            });
+            html += '<button class="btn btn-secondary w-100" onclick="location.reload()">กลับ</button>';
+        }
+        formArea.innerHTML = html;
+    });
+}
 
     function submitData() {
         var type = document.querySelector('input[name="type"]:checked').value;
@@ -207,6 +291,43 @@
         var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
         myModal.show();
     }
+
+// ฟังก์ชันปิดงาน (ไม้ตายรูป 3 ใบ)
+async function closeJob(row) {
+    const fileInput = document.getElementById('files_' + row);
+    const btn = document.getElementById('btn_' + row);
+    
+    if (fileInput.files.length === 0) { alert("กรุณาแนบรูปภาพการแก้ไขอย่างน้อย 1 รูป"); return; }
+    if (fileInput.files.length > 3) { alert("อัปโหลดได้ไม่เกิน 3 รูปครับ"); return; }
+
+    btn.disabled = true;
+    btn.innerText = "กำลังอัปโหลด...";
+
+    let base64Images = [];
+    for (let file of fileInput.files) {
+        const base64 = await toBase64(file);
+        base64Images.push(base64);
+    }
+
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'close_job', row: row, images: base64Images })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert("ปิดงานสำเร็จ!");
+        showDeptMenu(); // รีโหลดรายการเฉพาะของแผนกนั้น
+    })
+    .catch(err => alert("Error: " + err));
+}
+
+const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
+    
 </script>
 
 </body>
