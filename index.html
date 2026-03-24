@@ -106,7 +106,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGpnApKlOWAW3pLFVAEkj_zIFSX73S7StrhMXPcXKJS_bUgzQEFerh095xLLr4PiZl/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0ZPNz751Tcj4xeSp-iLwKy8wcZNjv83Y6g7-F4LpNGM7ywbNJnckG1FcG9gbTT7_O/exec"; 
     var currentGroup = 0;
 
     function setGroup(id) {
@@ -331,29 +331,45 @@ const toBase64 = file => new Promise((resolve, reject) => {
     reader.onerror = error => reject(error);
 });
 
-
-    function loadByStatus(status) {
-    // ปิดหน้าฟอร์มบันทึกข้อมูลโชว์แค่ตาราง
+    // ฟังก์ชันใหม่: รีเซ็ตหน้าจอทุกครั้งที่เปลี่ยนเมนู (ป้องกันหน้าค้าง)
+function resetDisplay() {
     document.getElementById('setup-info').style.display = 'none';
     document.getElementById('inspect-form').style.display = 'block';
     
-    // ซ่อนส่วนบันทึกข้อมูล (Card) เพราะเราจะดูแค่รายการ
+    // แสดง Card บันทึกข้อมูลกลับมา (เผื่อโดนซ่อนจากเมนูอื่น)
     const cardInput = document.querySelector('.card.p-3.mb-3');
-    if(cardInput) cardInput.style.display = 'none';
+    if (cardInput) cardInput.style.display = 'block';
+    
+    // ล้างข้อมูลเก่าในตาราง
+    document.getElementById('presentation-table').innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังโหลด...</td></tr>';
+}
 
-    const tableBody = document.getElementById('presentation-table');
+function setGroup(id) {
+    currentGroup = id;
+    resetDisplay(); // เรียกตัวรีเซ็ต
+    document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
+    loadPresentationData(id);
+}
+
+
+    function loadByStatus(status) {
+    resetDisplay(); // เรียกตัวรีเซ็ต
+    
+    // ถ้าดูสถานะงาน ให้ซ่อน Card บันทึกข้อมูล
+    const cardInput = document.querySelector('.card.p-3.mb-3');
+    if (cardInput) cardInput.style.display = 'none';
+
     document.getElementById('display-group').innerText = (status === 'Pending') ? 'รายการรอดำเนินการทั้งหมด' : 'รายการดำเนินการแล้วทั้งหมด';
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังดึงข้อมูล...</td></tr>';
 
-    // ดึงข้อมูลทั้งหมดมา กรองตาม Status
     fetch(SCRIPT_URL + "?action=read_all") 
     .then(res => res.json())
     .then(data => {
+        const tableBody = document.getElementById('presentation-table');
         tableBody.innerHTML = '';
         let filteredData = data.filter(item => item.status === status);
         
         if (filteredData.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">ไม่พบรายการ${status === 'Pending' ? 'รอดำเนินการ' : 'ที่เสร็จแล้ว'}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">ไม่พบรายการ...</td></tr>`;
             return;
         }
 
@@ -377,7 +393,6 @@ const toBase64 = file => new Promise((resolve, reject) => {
         });
     });
 }
-
     
 </script>
 
