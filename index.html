@@ -102,7 +102,7 @@
 
 <script>
     // --- ตั้งค่าส่วนตัวตรงนี้ ---
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkFOOlnn63ZO6mESfAIe06LCbgM4EMRg0Xlw8FzrYKEm7Sgti5J79G-VdiBBAea8O_/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxduUKHQKcni0XeW13z9ONEqWQws9IFlgB06YgF8iPkJuJC0d4HK1wTbywYTAGqyZN/exec"; 
     var currentGroup = 0;
 
     function setGroup(id) {
@@ -213,6 +213,41 @@
         var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
         myModal.show();
     }
+
+    
+function loadGroupData(groupId) {
+    const tableBody = document.getElementById('display-table');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center">กำลังโหลดข้อมูล...</td></tr>';
+
+    // เราจะใช้ SCRIPT_URL เดิมที่มีอยู่แล้ว แต่ส่งคำสั่ง GET ไปแทน
+    fetch(SCRIPT_URL + "?action=read&group=" + groupId)
+    .then(res => res.json())
+    .then(data => {
+        tableBody.innerHTML = '';
+        if (data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center">ยังไม่มีบันทึกสำหรับกลุ่มนี้</td></tr>';
+            return;
+        }
+        data.forEach(row => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td><b>${row.department}</b></td>
+                    <td><span class="badge ${row.type === 'Safety' ? 'bg-danger' : 'bg-primary'}">${row.type}</span></td>
+                    <td>${row.comment}</td>
+                    <td>
+                        <img src="${row.photo}" style="height: 50px; cursor: pointer;" 
+                             onclick="viewImage('${row.photo}')" class="rounded border">
+                    </td>
+                </tr>
+            `;
+        });
+    });
+}
+
+function viewImage(url) {
+    document.getElementById('modalImg').src = url;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
 </script>
 
 </body>
