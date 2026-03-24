@@ -69,7 +69,7 @@
             <button id="btnSubmit" class="btn btn-success w-100" onclick="submitData()">ส่งข้อมูลเข้าแผนก</button>
         </div>
 
-        <div class="mt-5">
+        <div id="presentation-section" class="mt-5">
             <h4 class="text-primary"><i class="bi bi-display"></i> รายการที่พบของกลุ่มนี้ (สำหรับพรีเซนต์)</h4>
             <div class="table-responsive mt-3">
                 <table class="table table-bordered table-striped align-middle">
@@ -188,18 +188,25 @@ function resetDisplay() {
     const cardInput = document.querySelector('.card.p-3.mb-3');
     if (cardInput) cardInput.style.display = 'block';
 
-    // เคลียร์ dynamic
+    // ❗ ซ่อนตารางพรีเซนต์ก่อน
+    const p = document.getElementById('presentation-section');
+    if (p) p.style.display = 'none';
+
     const box = document.getElementById('dynamic-content');
     if (box) box.innerHTML = '';
-
-    document.getElementById('presentation-table').innerHTML =
-        '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังโหลด...</td></tr>';
 }
 
 function setGroup(id) {
     currentGroup = id;
     resetDisplay();
-    document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
+
+    document.getElementById('display-group').innerText =
+        'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
+
+    // ✅ แสดงตารางเฉพาะตอนเลือกกลุ่ม
+    const p = document.getElementById('presentation-section');
+    if (p) p.style.display = 'block';
+
     loadPresentationData(id);
 }
 
