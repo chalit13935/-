@@ -45,7 +45,7 @@
     
     <div id="inspect-form" style="display:none;">
         <h3 id="display-group">บันทึกข้อมูล</h3>
-        <div id="dynamic-content"></div>
+        <div id="dynamic-content" class="mt-3"></div>
         <div class="card p-3 mb-3">
             <label>ประเภทการตรวจ:</label>
             <div class="btn-group mb-3">
@@ -119,6 +119,58 @@ function escapeHTML(str) {
     })[m]);
 }
 
+    function loadByStatus(status) {
+    resetDisplay();
+
+    const cardInput = document.querySelector('.card.p-3.mb-3');
+    if (cardInput) cardInput.style.display = 'none';
+
+    const box = document.getElementById('dynamic-content');
+    box.innerHTML = '🔄 กำลังโหลดข้อมูล...';
+
+    safeFetch(SCRIPT_URL + "?action=read_all")
+    .then(data => {
+        let filtered = data.filter(item => item.status === status);
+
+        let html = `<h4>${status === 'Pending' ? '⏳ รอดำเนินการ' : '✅ ดำเนินการแล้ว'}</h4>`;
+
+        if (filtered.length === 0) {
+            html += `<div class="alert alert-info">ไม่พบรายการ</div>`;
+        } else {
+            html += `
+            <div class="table-responsive">
+            <table class="table table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>แผนก</th>
+                    <th>ประเภท</th>
+                    <th>รายละเอียด</th>
+                    <th>รูป</th>
+                </tr>
+            </thead><tbody>`;
+
+            filtered.forEach(item => {
+                html += `
+                <tr>
+                    <td>${escapeHTML(item.department)}</td>
+                    <td>${escapeHTML(item.type)}</td>
+                    <td>${escapeHTML(item.comment)}</td>
+                    <td>
+                        ${item.photo ? `<img src="${item.photo}" width="60">` : '-'}
+                    </td>
+                </tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+        }
+
+        box.innerHTML = html;
+    })
+    .catch(err => {
+        box.innerHTML = `<div class="alert alert-danger">❌ โหลดข้อมูลไม่ได้</div>`;
+    });
+}
+
 // ✅ fetch มาตรฐาน
 function safeFetch(url, options = {}) {
     return fetch(url, options)
@@ -136,8 +188,9 @@ function resetDisplay() {
     const cardInput = document.querySelector('.card.p-3.mb-3');
     if (cardInput) cardInput.style.display = 'block';
 
-    // เคลียร์ dynamic area
-    document.getElementById('dynamic-content').innerHTML = '';
+    // เคลียร์ dynamic
+    const box = document.getElementById('dynamic-content');
+    if (box) box.innerHTML = '';
 
     document.getElementById('presentation-table').innerHTML =
         '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังโหลด...</td></tr>';
