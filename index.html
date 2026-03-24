@@ -15,6 +15,9 @@
             .sidebar { width: 100%; height: auto; position: relative; }
             .main-content { margin-left: 0; }
         }
+        /* เพิ่มเติม: สไตล์สำหรับรูปภาพในตาราง */
+        .img-preview { width: 60px; height: 60px; object-fit: cover; cursor: pointer; border-radius: 5px; border: 1px solid #ddd; }
+        .img-preview:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -59,8 +62,43 @@
             
             <button id="btnSubmit" class="btn btn-success w-100" onclick="submitData()">ส่งข้อมูลเข้าแผนก</button>
         </div>
+
+        <div class="mt-5">
+            <h4 class="text-primary"><i class="bi bi-display"></i> รายการที่พบของกลุ่มนี้ (สำหรับพรีเซนต์)</h4>
+            <div class="table-responsive mt-3">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 15%;">แผนก</th>
+                            <th style="width: 10%;">ประเภท</th>
+                            <th>รายละเอียดปัญหา</th>
+                            <th style="width: 15%;">รูปภาพ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="presentation-table">
+                        <tr><td colspan="4" class="text-center text-muted">กำลังโหลดข้อมูลการตรวจ...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
+
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">รูปภาพจุดที่พบปัญหา</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center bg-light">
+                <img id="fullImage" src="" class="img-fluid rounded shadow">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     // --- ตั้งค่าส่วนตัวตรงนี้ ---
@@ -72,6 +110,9 @@
         document.getElementById('setup-info').style.display = 'none';
         document.getElementById('inspect-form').style.display = 'block';
         document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
+        
+        // เพิ่มเติม: เมื่อเปลี่ยนกลุ่ม ให้ดึงข้อมูลมาโชว์ในตารางพรีเซนต์ทันที
+        loadPresentationData(id);
     }
     
     function showDeptMenu() {
@@ -123,12 +164,54 @@
         .then(res => res.json())
         .then(data => {
             alert("บันทึกข้อมูลสำเร็จ!");
-            location.reload(); // รีเฟรชหน้าเพื่อเริ่มใหม่
+            location.reload(); 
         })
         .catch(err => {
             alert("เกิดข้อผิดพลาด: " + err);
             document.getElementById('btnSubmit').disabled = false;
         });
+    }
+
+    // --- ส่วนที่เพิ่มใหม่: ฟังก์ชันดึงข้อมูลมาแสดงในตาราง ---
+    function loadPresentationData(groupId) {
+        const tableBody = document.getElementById('presentation-table');
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">กำลังดึงข้อมูล...</td></tr>';
+
+        // ดึงข้อมูลผ่านคำสั่ง GET โดยส่งพารามิเตอร์ action=read และ group
+        fetch(SCRIPT_URL + "?action=read&group=" + groupId)
+        .then(res => res.json())
+        .then(data => {
+            tableBody.innerHTML = '';
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">ไม่พบประวัติการตรวจของกลุ่มนี้</td></tr>';
+                return;
+            }
+            
+            data.forEach(item => {
+                let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
+                let photoHtml = item.photo !== "ไม่มีรูป" 
+                    ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')">` 
+                    : '<span class="text-muted">ไม่มีรูป</span>';
+
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><b>${item.department}</b></td>
+                        <td><span class="badge ${badgeClass}">${item.type}</span></td>
+                        <td>${item.comment}</td>
+                        <td class="text-center">${photoHtml}</td>
+                    </tr>
+                `;
+            });
+        })
+        .catch(err => {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ไม่สามารถโหลดข้อมูลได้ หรือยังไม่ได้ตั้งค่า doGet ใน Apps Script</td></tr>';
+        });
+    }
+
+    function openFullImage(url) {
+        document.getElementById('fullImage').src = url;
+        var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        myModal.show();
     }
 </script>
 
