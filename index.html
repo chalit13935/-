@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety & 6S System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .sidebar { height: 100vh; background: #2c3e50; color: white; position: fixed; width: 200px; }
+        .main-content { margin-left: 200px; padding: 20px; }
+        .nav-link { color: #ecf0f1; cursor: pointer; border-bottom: 1px solid #34495e; }
+        .nav-link:hover { background: #34495e; }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar d-flex flex-column p-3">
+    <h5>กลุ่มตรวจ คปอ.</h5>
+    <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-link" onclick="setGroup(1)">👤 กลุ่มที่ 1</li>
+        <li class="nav-link" onclick="setGroup(2)">👤 กลุ่มที่ 2</li>
+        <li class="nav-link" onclick="setGroup(3)">👤 กลุ่มที่ 3</li>
+        <li class="nav-link" onclick="setGroup(4)">👤 กลุ่มที่ 4</li>
+        <li class="nav-link" onclick="setGroup(5)">👤 กลุ่มที่ 5</li>
+    </ul>
+    <hr>
+    <button class="btn btn-warning btn-sm" onclick="showDeptMenu()">📦 เมนูสำหรับแผนก (แก้ไขงาน)</button>
+</div>
+
+<div class="main-content">
+    <div id="setup-info" class="alert alert-info">กรุณาเลือก "กลุ่มตรวจ" ที่เมนูด้านซ้าย</div>
+    
+    <div id="inspect-form" style="display:none;">
+        <h3 id="display-group">บันทึกข้อมูล</h3>
+        <div class="card p-3 mb-3">
+            <label>ประเภทการตรวจ:</label>
+            <div class="btn-group mb-3">
+                <input type="radio" class="btn-check" name="type" id="type1" value="6S">
+                <label class="btn btn-outline-primary" for="type1">6ส</label>
+                <input type="radio" class="btn-check" name="type" id="type2" value="Safety">
+                <label class="btn btn-outline-danger" for="type2">คปอ. (Safety)</label>
+            </div>
+
+            <label>แผนกที่เข้าตรวจ:</label>
+            <select class="form-select mb-3" id="dept">
+                <option value="Store">สโตร์</option>
+                <option value="Prod_A">ไลน์ผลิต A</option>
+                <option value="QC">ห้องแล็บ QC</option>
+            </select>
+
+            <label>ถ่ายรูป/ระบุปัญหา:</label>
+            <input type="file" class="form-control mb-2" accept="image/*" capture="environment">
+            <textarea class="form-control mb-3" placeholder="ระบุสิ่งที่พบและความเสี่ยง..."></textarea>
+            
+            <button class="btn btn-success w-100">ส่งข้อมูลเข้าแผนก</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setGroup(id) {
+        document.getElementById('setup-info').style.display = 'none';
+        document.getElementById('inspect-form').style.display = 'block';
+        document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
+    }
+    
+    function showDeptMenu() {
+        alert('กำลังไปหน้าที่แผนกเข้ามาดูรายการงานที่ต้องแก้ไข...');
+        // ส่วนนี้จะดึงข้อมูลจาก Google Sheets มาโชว์เป็นรายการ
+    }
+</script>
+
+</body>
+</html>
