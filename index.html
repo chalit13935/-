@@ -45,6 +45,7 @@
     
     <div id="inspect-form" style="display:none;">
         <h3 id="display-group">บันทึกข้อมูล</h3>
+        <div id="dynamic-content"></div>
         <div class="card p-3 mb-3">
             <label>ประเภทการตรวจ:</label>
             <div class="btn-group mb-3">
@@ -135,6 +136,9 @@ function resetDisplay() {
     const cardInput = document.querySelector('.card.p-3.mb-3');
     if (cardInput) cardInput.style.display = 'block';
 
+    // เคลียร์ dynamic area
+    document.getElementById('dynamic-content').innerHTML = '';
+
     document.getElementById('presentation-table').innerHTML =
         '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังโหลด...</td></tr>';
 }
@@ -150,32 +154,29 @@ function setGroup(id) {
 function showDashboard() {
     resetDisplay();
 
-    const formArea = document.getElementById('inspect-form');
     const cardInput = document.querySelector('.card.p-3.mb-3');
     if (cardInput) cardInput.style.display = 'none';
 
-    formArea.innerHTML = '<div class="text-center text-primary">📊 กำลังโหลด Dashboard...</div>';
+    const box = document.getElementById('dynamic-content');
+    box.innerHTML = '📊 กำลังโหลด...';
 
     safeFetch(SCRIPT_URL + "?action=get_dashboard")
     .then(data => {
-        let statsHtml = `
-        <h3 class="mb-4 text-primary">📊 Dashboard</h3>
+        let html = `
+        <h3>📊 Dashboard</h3>
         <div class="card p-3 mb-3 bg-warning">
-            <h5>งานค้าง</h5>
-            <h2>${data.total_pending}</h2>
+            งานค้าง: ${data.total_pending}
         </div>
-        <div class="card p-3 mb-3">
-            <h5>ผลงานแต่ละแผนก</h5><table class="table">`;
+        <div class="card p-3">
+            <h5>ผลงาน</h5>
+            <table class="table">`;
 
-        for (let dept in data.stats) {
-            statsHtml += `<tr><td>${escapeHTML(dept)}</td><td>${data.stats[dept]}</td></tr>`;
+        for (let d in data.stats) {
+            html += `<tr><td>${escapeHTML(d)}</td><td>${data.stats[d]}</td></tr>`;
         }
 
-        statsHtml += `</table></div>`;
-        formArea.innerHTML = statsHtml;
-    })
-    .catch(err => {
-        formArea.innerHTML = `<div class="alert alert-danger">❌ ${err.message}</div>`;
+        html += `</table></div>`;
+        box.innerHTML = html;
     });
 }
 
@@ -183,39 +184,49 @@ function showDashboard() {
 function showDeptMenu() {
     resetDisplay();
 
-    const formArea = document.getElementById('inspect-form');
     const cardInput = document.querySelector('.card.p-3.mb-3');
     if (cardInput) cardInput.style.display = 'none';
 
     let html = '<div class="row">';
     ['Store','Prod_A','QC'].forEach(d => {
-        html += `<div class="col-4"><button class="btn btn-dark w-100" onclick="loadDeptJobs('${d}')">${d}</button></div>`;
+        html += `
+        <div class="col-4">
+            <button class="btn btn-dark w-100"
+            onclick="loadDeptJobs('${d}')">${d}</button>
+        </div>`;
     });
     html += '</div>';
 
-    formArea.innerHTML = html;
+    document.getElementById('dynamic-content').innerHTML = html;
 }
-
 function loadDeptJobs(dept) {
-    const formArea = document.getElementById('inspect-form');
-    formArea.innerHTML = 'กำลังโหลด...';
+    const box = document.getElementById('dynamic-content');
+    box.innerHTML = 'กำลังโหลด...';
 
     safeFetch(SCRIPT_URL + "?action=dept_read&dept=" + dept)
     .then(data => {
         let html = `<h4>${dept}</h4>`;
+
+        if (data.length === 0) {
+            html += '<div class="alert alert-success">ไม่มีงาน</div>';
+        }
 
         data.forEach(item => {
             html += `
             <div class="card p-2 mb-2">
                 <p>${escapeHTML(item.comment)}</p>
                 <img src="${item.photo}" width="80">
-                <textarea id="fix_${item.row}"></textarea>
-                <input type="file" id="file_${item.row}" multiple>
-                <button onclick="closeJob(${item.row}, '${dept}')">ปิดงาน</button>
+                <textarea id="fix_${item.row}" class="form-control mb-1"></textarea>
+                <input type="file" id="file_${item.row}" multiple class="form-control mb-1">
+                <button class="btn btn-success btn-sm"
+                onclick="closeJob(${item.row}, '${dept}')">ปิดงาน</button>
             </div>`;
         });
 
-        formArea.innerHTML = html;
+        html += `<button class="btn btn-secondary mt-2"
+            onclick="showDeptMenu()">⬅ กลับ</button>`;
+
+        box.innerHTML = html;
     });
 }
 
