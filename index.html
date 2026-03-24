@@ -106,310 +106,199 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxgzUeO73fo1MaZStAkXYfAo65id0fBQS2QZBEbWh_XFK84vG9HgMFT3ImX9qdactV0/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyeTJp3su-uU7pVB0zyVHfQCZ2VhVJI7YC91JvK1ZYAdz8saGODIXA-AU-Lw10GzeoU/exec"; 
     var currentGroup = 0;
+
+    // --- 1. ฟังก์ชันจัดการการแสดงผล ---
+    function resetDisplay() {
+        document.getElementById('setup-info').style.display = 'none';
+        document.getElementById('inspect-form').style.display = 'block';
+        const cardInput = document.querySelector('.card.p-3.mb-3');
+        if (cardInput) cardInput.style.display = 'block';
+        document.getElementById('presentation-table').innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังโหลด...</td></tr>';
+    }
 
     function setGroup(id) {
         currentGroup = id;
-        document.getElementById('setup-info').style.display = 'none';
-        document.getElementById('inspect-form').style.display = 'block';
+        resetDisplay();
         document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
         loadPresentationData(id);
     }
 
+    // --- 2. ฟังก์ชัน Dashboard ---
+    function showDashboard() {
+        resetDisplay();
+        const formArea = document.getElementById('inspect-form');
+        const cardInput = document.querySelector('.card.p-3.mb-3');
+        if (cardInput) cardInput.style.display = 'none';
+        formArea.innerHTML = '<div class="text-center text-primary">📊 กำลังคำนวณข้อมูล Dashboard...</div>';
 
-// เพิ่มฟังก์ชัน Dashboard
-function showDashboard() {
-    resetDisplay(); // ใช้ตัว Reset ที่เราทำไว้
-    const formArea = document.getElementById('inspect-form');
-    formArea.innerHTML = '<div class="text-center text-primary">📊 กำลังคำนวณข้อมูล Dashboard...</div>';
-
-    fetch(SCRIPT_URL + "?action=get_dashboard")
-    .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok');
-        return res.json();
-    })
-    .then(data => {
-        let statsHtml = `
-            <h3 class="mb-4 text-primary"><i class="bi bi-speedometer2"></i> Dashboard สรุปผล</h3>
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                    <div class="card bg-warning text-dark p-3 shadow-sm">
-                        <h5>งานรอดำเนินการทั้งหมด</h5>
-                        <h2 class="mb-0">${data.total_pending} รายการ</h2>
-                    </div>
+        fetch(SCRIPT_URL + "?action=get_dashboard")
+        .then(res => res.json())
+        .then(data => {
+            let statsHtml = `
+                <h3 class="mb-4 text-primary"><i class="bi bi-speedometer2"></i> Dashboard สรุปผล</h3>
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3"><div class="card bg-warning text-dark p-3 shadow-sm"><h5>งานรอดำเนินการทั้งหมด</h5><h2 class="mb-0">${data.total_pending} รายการ</h2></div></div>
                 </div>
-            </div>
-            <div class="card p-3 mb-4 shadow-sm">
-                <h5>🏆 ผลงานการแก้ไขรายแผนก (Success)</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm mt-2">
-                        <thead><tr><th>แผนก</th><th>จำนวนที่เสร็จ</th></tr></thead>
-                        <tbody>`;
-        
-        if (Object.keys(data.stats).length === 0) {
-            statsHtml += '<tr><td colspan="2" class="text-center text-muted">ยังไม่มีข้อมูลงานที่ทำเสร็จ</td></tr>';
-        } else {
-            for (let dept in data.stats) {
-                statsHtml += `<tr><td><b>${dept}</b></td><td><span class="badge bg-success">${data.stats[dept]} เคส</span></td></tr>`;
-            }
-        }
-        
-        statsHtml += `</tbody></table></div></div>
-            <div class="card p-3 shadow-sm">
-                <h5>🕒 รายการที่เพิ่งปิดงานล่าสุด</h5>
-                <ul class="list-group list-group-flush">`;
-        
-        if (data.recent_success.length === 0) {
-            statsHtml += '<li class="list-group-item text-muted">ยังไม่มีประวัติการปิดงาน</li>';
-        } else {
-            data.recent_success.forEach(item => {
-                statsHtml += `<li class="list-group-item d-flex justify-content-between"><span>แผนก ${item.dept}</span><small class="text-muted">${item.date}</small></li>`;
-            });
-        }
+                <div class="card p-3 mb-4 shadow-sm"><h5>🏆 ผลงานการแก้ไขรายแผนก (Success)</h5>
+                    <table class="table table-sm mt-2"><thead><tr><th>แผนก</th><th>จำนวนที่เสร็จ</th></tr></thead><tbody>`;
+            for (let dept in data.stats) { statsHtml += `<tr><td><b>${dept}</b></td><td><span class="badge bg-success">${data.stats[dept]} เคส</span></td></tr>`; }
+            statsHtml += `</tbody></table></div>
+                <div class="card p-3 shadow-sm"><h5>🕒 รายการที่เพิ่งปิดงานล่าสุด</h5><ul class="list-group list-group-flush">`;
+            data.recent_success.forEach(item => { statsHtml += `<li class="list-group-item d-flex justify-content-between"><span>แผนก ${item.dept}</span><small class="text-muted">${item.date}</small></li>`; });
+            statsHtml += `</ul></div><button class="btn btn-secondary mt-3 w-100" onclick="location.reload()">🔄 กลับหน้าหลัก</button>`;
+            formArea.innerHTML = statsHtml;
+        });
+    }
 
-        statsHtml += `</ul></div><button class="btn btn-secondary mt-3 w-100" onclick="location.reload()">🔄 กลับหน้าหลัก/รีเฟรช</button>`;
-        formArea.innerHTML = statsHtml;
-    })
-    .catch(err => {
-        console.error(err);
-        formArea.innerHTML = `<div class="alert alert-danger">❌ เกิดข้อผิดพลาด: ไม่สามารถดึงข้อมูล Dashboard ได้ <br> <small>สาเหตุ: ${err.message}</small></div>
-        <button class="btn btn-secondary w-100" onclick="location.reload()">กลับหน้าหลัก</button>`;
-    });
-}
-    
-    // แก้ฟังก์ชัน เมนูแผนก (เพิ่มระบบเลือกรูป 3 รูป)
+    // --- 3. ฟังก์ชันเมนูแผนก (แบบกดปุ่มเลือก) ---
     function showDeptMenu() {
-    let deptName = prompt("กรุณาระบุชื่อแผนกของคุณ (เช่น Store, Prod_A, QC):");
-    if (!deptName) return;
+        resetDisplay();
+        const formArea = document.getElementById('inspect-form');
+        const cardInput = document.querySelector('.card.p-3.mb-3');
+        if (cardInput) cardInput.style.display = 'none';
+        document.getElementById('display-group').innerText = '📦 เลือกแผนกเพื่อจัดการงานแก้ไข';
+        
+        // รายชื่อแผนก
+        const departments = ['Store', 'Prod_A', 'QC']; 
+        let html = '<div class="row g-2 mt-3">';
+        departments.forEach(dept => {
+            html += `<div class="col-6 col-md-4"><button class="btn btn-outline-dark w-100 py-3 shadow-sm" onclick="loadDeptJobs('${dept}')"><i class="bi bi-building"></i><br>${dept}</button></div>`;
+        });
+        html += '</div>';
+        formArea.innerHTML = html;
+    }
 
-    const formArea = document.getElementById('inspect-form');
-    formArea.innerHTML = '<div class="text-center">กำลังดึงข้อมูลงานค้าง...</div>';
-    document.getElementById('setup-info').style.display = 'none';
-    document.getElementById('inspect-form').style.display = 'block';
-
-    fetch(SCRIPT_URL + "?action=dept_read&dept=" + deptName)
-    .then(res => res.json())
-    .then(data => {
-        let html = `<h3 class="mb-3">งานค้างของแผนก: ${deptName}</h3>`;
-        if (data.length === 0) {
-            html += '<div class="alert alert-success">ยินดีด้วย! ไม่มีงานรอดำเนินการ</div><button class="btn btn-secondary" onclick="location.reload()">กลับ</button>';
-        } else {
-            data.forEach(item => {
-                html += `
-                    <div class="card p-3 mb-3 border-warning shadow-sm">
-                        <div class="row">
-                            <div class="col-8">
-                                <span class="badge bg-warning text-dark mb-2">รอดำเนินการ</span>
-                                <p class="mb-1"><b>ปัญหา:</b> ${item.comment}</p>
-                                <small class="text-muted">ประเภท: ${item.type}</small>
-                            </div>
-                            <div class="col-4 text-end">
+    function loadDeptJobs(dept) {
+        const formArea = document.getElementById('inspect-form');
+        formArea.innerHTML = `<div class="text-center">กำลังโหลดงานของแผนก ${dept}...</div>`;
+        fetch(SCRIPT_URL + "?action=dept_read&dept=" + dept)
+        .then(res => res.json())
+        .then(data => {
+            let html = `<h4 class="mb-3 text-primary">รายการงานค้าง: แผนก ${dept}</h4>`;
+            if (data.length === 0) {
+                html += '<div class="alert alert-success">ไม่มีงานค้างในแผนกนี้</div>';
+            } else {
+                data.forEach(item => {
+                    html += `
+                        <div class="card p-3 mb-3 border-warning shadow-sm">
+                            <div class="d-flex justify-content-between">
+                                <div><span class="badge bg-warning text-dark mb-2">รอดำเนินการ</span><p class="mb-1"><b>ปัญหา:</b> ${item.comment}</p></div>
                                 <img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">
                             </div>
-                        </div>
-                        <hr>
-                        <label class="form-label small">อัปโหลดรูปแก้ไข (ไม่เกิน 3 รูป):</label>
-                        <input type="file" id="files_${item.row}" class="form-control form-control-sm mb-2" multiple accept="image/*">
-                        <button class="btn btn-success btn-sm w-100" id="btn_${item.row}" onclick="closeJob(${item.row})">📸 ปิดจบงาน</button>
-                    </div>`;
-            });
-            html += '<button class="btn btn-secondary w-100" onclick="location.reload()">กลับ</button>';
-        }
-        formArea.innerHTML = html;
-    });
-}
+                            <hr>
+                            <div class="mb-2"><label class="form-label small"><b>รายละเอียดการแก้ไข:</b></label>
+                                <textarea id="fix_comment_${item.row}" class="form-control form-control-sm" placeholder="ระบุสิ่งที่ได้แก้ไขไป..."></textarea>
+                            </div>
+                            <div class="mb-2"><label class="form-label small"><b>รูปภาพการแก้ไข (สูงสุด 3 รูป):</b></label>
+                                <input type="file" id="files_${item.row}" class="form-control form-control-sm" multiple accept="image/*">
+                            </div>
+                            <button class="btn btn-success btn-sm w-100" id="btn_${item.row}" onclick="closeJobWithDetails(${item.row}, '${dept}')">📸 ปิดงาน</button>
+                        </div>`;
+                });
+            }
+            html += `<button class="btn btn-secondary w-100 mt-2" onclick="showDeptMenu()">ย้อนกลับ</button>`;
+            formArea.innerHTML = html;
+        });
+    }
 
+    async function closeJobWithDetails(row, dept) {
+        const fileInput = document.getElementById('files_' + row);
+        const fixComment = document.getElementById('fix_comment_' + row).value;
+        const btn = document.getElementById('btn_' + row);
+        
+        if (!fixComment) { alert("กรุณาระบุรายละเอียดการแก้ไข"); return; }
+        if (fileInput.files.length === 0) { alert("กรุณาแนบรูปภาพอย่างน้อย 1 รูป"); return; }
+        if (fileInput.files.length > 3) { alert("อัปโหลดได้ไม่เกิน 3 รูป"); return; }
+
+        btn.disabled = true; btn.innerText = "กำลังดำเนินการ...";
+        let base64Images = [];
+        for (let file of fileInput.files) { base64Images.push(await toBase64(file)); }
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'close_job', row: row, images: base64Images, fix_comment: fixComment })
+        })
+        .then(res => res.json())
+        .then(data => { alert("ปิดงานสำเร็จ!"); loadDeptJobs(dept); })
+        .catch(err => { alert("Error: " + err); btn.disabled = false; });
+    }
+
+    // --- 4. ฟังก์ชันหลักอื่นๆ ---
     function submitData() {
         var type = document.querySelector('input[name="type"]:checked').value;
         var dept = document.getElementById('dept').value;
         var comment = document.getElementById('comment').value;
         var fileInput = document.getElementById('photo');
         var btn = document.getElementById('btnSubmit');
-
         if (!comment) { alert("กรุณาระบุรายละเอียดปัญหา"); return; }
-        
-        btn.disabled = true;
-        btn.innerText = "กำลังส่งข้อมูล... กรุณารอสักครู่";
+        btn.disabled = true; btn.innerText = "กำลังส่งข้อมูล...";
+
+        const sendData = (img) => {
+            sendToGoogle({ group_no: currentGroup, type: type, department: dept, comment: comment, image_data: img });
+        };
 
         if (fileInput.files.length > 0) {
-            var file = fileInput.files[0];
-            var reader = new FileReader();
-            reader.onloadend = function() {
-                sendToGoogle({
-                    group_no: currentGroup,
-                    type: type,
-                    department: dept,
-                    comment: comment,
-                    image_data: reader.result
-                });
-            };
-            reader.readAsDataURL(file);
-        } else {
-            sendToGoogle({
-                group_no: currentGroup,
-                type: type,
-                department: dept,
-                comment: comment,
-                image_data: null
-            });
-        }
+            toBase64(fileInput.files[0]).then(sendData);
+        } else { sendData(null); }
     }
 
     function sendToGoogle(formData) {
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify(formData)
-        })
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(formData) })
         .then(res => res.json())
-        .then(data => {
-            alert("บันทึกข้อมูลสำเร็จ!");
-            location.reload(); 
-        })
-        .catch(err => {
-            alert("เกิดข้อผิดพลาด: " + err);
-            document.getElementById('btnSubmit').disabled = false;
-            document.getElementById('btnSubmit').innerText = "ส่งข้อมูลเข้าแผนก";
-        });
+        .then(data => { alert("บันทึกสำเร็จ!"); location.reload(); })
+        .catch(err => { alert("Error: " + err); document.getElementById('btnSubmit').disabled = false; });
     }
 
     function loadPresentationData(groupId) {
-    const tableBody = document.getElementById('presentation-table');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังดึงข้อมูล...</td></tr>';
-
-    fetch(SCRIPT_URL + "?action=read&group=" + groupId)
-    .then(res => res.json())
-    .then(data => {
-        tableBody.innerHTML = '';
-        if (!data || data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">ไม่พบประวัติของกลุ่มนี้</td></tr>';
-            return;
-        }
-        data.forEach(item => {
-            let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
-            let statusBadge = (item.status === 'Success') 
-                ? '<span class="badge bg-success">✅ เสร็จแล้ว</span>' 
-                : '<span class="badge bg-warning text-dark">⏳ รอแก้ไข</span>';
-
-            let photoHtml = (item.photo && item.photo.includes("http")) 
-                ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">` 
-                : '<span class="text-muted">ไม่มีรูป</span>';
-
-            tableBody.innerHTML += `
-                <tr>
-                    <td><b>${item.department}</b><br>${statusBadge}</td>
-                    <td><span class="badge ${badgeClass}">${item.type}</span></td>
-                    <td>${item.comment}</td>
-                    <td class="text-center">${photoHtml}</td>
-                </tr>`;
+        fetch(SCRIPT_URL + "?action=read&group=" + groupId)
+        .then(res => res.json())
+        .then(data => {
+            const tableBody = document.getElementById('presentation-table');
+            tableBody.innerHTML = '';
+            if (!data || data.length === 0) { tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">ไม่พบข้อมูล</td></tr>'; return; }
+            data.forEach(item => {
+                let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
+                let statusBadge = (item.status === 'Success') ? '<span class="badge bg-success">✅ เสร็จแล้ว</span>' : '<span class="badge bg-warning text-dark">⏳ รอแก้ไข</span>';
+                let photoHtml = (item.photo && item.photo.includes("http")) ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">` : '<span class="text-muted">ไม่มีรูป</span>';
+                tableBody.innerHTML += `<tr><td><b>${item.department}</b><br>${statusBadge}</td><td><span class="badge ${badgeClass}">${item.type}</span></td><td>${item.comment}</td><td class="text-center">${photoHtml}</td></tr>`;
+            });
         });
-    });
-}
-    function openFullImage(url) {
-        document.getElementById('fullImage').src = url;
-        var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
-        myModal.show();
     }
-
-// ฟังก์ชันปิดงาน (ไม้ตายรูป 3 ใบ)
-async function closeJob(row) {
-    const fileInput = document.getElementById('files_' + row);
-    const btn = document.getElementById('btn_' + row);
-    
-    if (fileInput.files.length === 0) { alert("กรุณาแนบรูปภาพการแก้ไขอย่างน้อย 1 รูป"); return; }
-    if (fileInput.files.length > 3) { alert("อัปโหลดได้ไม่เกิน 3 รูปครับ"); return; }
-
-    btn.disabled = true;
-    btn.innerText = "กำลังอัปโหลด...";
-
-    let base64Images = [];
-    for (let file of fileInput.files) {
-        const base64 = await toBase64(file);
-        base64Images.push(base64);
-    }
-
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'close_job', row: row, images: base64Images })
-    })
-    .then(res => res.json())
-    .then(data => {
-        alert("ปิดงานสำเร็จ!");
-        showDeptMenu(); // รีโหลดรายการเฉพาะของแผนกนั้น
-    })
-    .catch(err => alert("Error: " + err));
-}
-
-const toBase64 = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-});
-
-    // ฟังก์ชันใหม่: รีเซ็ตหน้าจอทุกครั้งที่เปลี่ยนเมนู (ป้องกันหน้าค้าง)
-function resetDisplay() {
-    document.getElementById('setup-info').style.display = 'none';
-    document.getElementById('inspect-form').style.display = 'block';
-    
-    // แสดง Card บันทึกข้อมูลกลับมา (เผื่อโดนซ่อนจากเมนูอื่น)
-    const cardInput = document.querySelector('.card.p-3.mb-3');
-    if (cardInput) cardInput.style.display = 'block';
-    
-    // ล้างข้อมูลเก่าในตาราง
-    document.getElementById('presentation-table').innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังโหลด...</td></tr>';
-}
-
-function setGroup(id) {
-    currentGroup = id;
-    resetDisplay(); // เรียกตัวรีเซ็ต
-    document.getElementById('display-group').innerText = 'กลุ่มตรวจที่ ' + id + ' กำลังบันทึกข้อมูล';
-    loadPresentationData(id);
-}
-
 
     function loadByStatus(status) {
-    resetDisplay(); // เรียกตัวรีเซ็ต
-    
-    // ถ้าดูสถานะงาน ให้ซ่อน Card บันทึกข้อมูล
-    const cardInput = document.querySelector('.card.p-3.mb-3');
-    if (cardInput) cardInput.style.display = 'none';
-
-    document.getElementById('display-group').innerText = (status === 'Pending') ? 'รายการรอดำเนินการทั้งหมด' : 'รายการดำเนินการแล้วทั้งหมด';
-
-    fetch(SCRIPT_URL + "?action=read_all") 
-    .then(res => res.json())
-    .then(data => {
-        const tableBody = document.getElementById('presentation-table');
-        tableBody.innerHTML = '';
-        let filteredData = data.filter(item => item.status === status);
-        
-        if (filteredData.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">ไม่พบรายการ...</td></tr>`;
-            return;
-        }
-
-        filteredData.forEach(item => {
-            let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
-            let statusBadge = (item.status === 'Success') 
-                ? '<span class="badge bg-success">✅ เสร็จแล้ว</span>' 
-                : '<span class="badge bg-warning text-dark">⏳ รอแก้ไข</span>';
-
-            let photoHtml = (item.photo && item.photo.includes("http")) 
-                ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">` 
-                : '<span class="text-muted">ไม่มีรูป</span>';
-
-            tableBody.innerHTML += `
-                <tr>
-                    <td><b>${item.department}</b><br>${statusBadge}</td>
-                    <td><span class="badge ${badgeClass}">${item.type}</span></td>
-                    <td>${item.comment}</td>
-                    <td class="text-center">${photoHtml}</td>
-                </tr>`;
+        resetDisplay();
+        const cardInput = document.querySelector('.card.p-3.mb-3');
+        if (cardInput) cardInput.style.display = 'none';
+        document.getElementById('display-group').innerText = (status === 'Pending') ? 'รายการรอดำเนินการทั้งหมด' : 'รายการดำเนินการแล้วทั้งหมด';
+        fetch(SCRIPT_URL + "?action=read_all")
+        .then(res => res.json())
+        .then(data => {
+            const tableBody = document.getElementById('presentation-table');
+            tableBody.innerHTML = '';
+            let filtered = data.filter(item => item.status === status);
+            if (filtered.length === 0) { tableBody.innerHTML = '<tr><td colspan="4" class="text-center">ไม่พบรายการ</td></tr>'; return; }
+            filtered.forEach(item => {
+                let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
+                let statusBadge = (item.status === 'Success') ? '<span class="badge bg-success">✅ เสร็จแล้ว</span>' : '<span class="badge bg-warning text-dark">⏳ รอแก้ไข</span>';
+                let photoHtml = (item.photo && item.photo.includes("http")) ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">` : '<span class="text-muted">ไม่มีรูป</span>';
+                tableBody.innerHTML += `<tr><td><b>${item.department}</b><br>${statusBadge}</td><td><span class="badge ${badgeClass}">${item.type}</span></td><td>${item.comment}</td><td class="text-center">${photoHtml}</td></tr>`;
+            });
         });
+    }
+
+    function openFullImage(url) {
+        document.getElementById('fullImage').src = url;
+        new bootstrap.Modal(document.getElementById('imageModal')).show();
+    }
+
+    const toBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
     });
-}
-    
 </script>
 
 </body>
