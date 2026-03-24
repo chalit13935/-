@@ -29,6 +29,11 @@
         <li class="nav-link" onclick="setGroup(3)">👤 กลุ่มที่ 3</li>
         <li class="nav-link" onclick="setGroup(4)">👤 กลุ่มที่ 4</li>
         <li class="nav-link" onclick="setGroup(5)">👤 กลุ่มที่ 5</li>
+        
+        <hr>
+        <h6 class="text-warning ps-2">📋 สถานะการดำเนินการ</h6>
+        <li class="nav-link" onclick="loadByStatus('Pending')">⏳ รอดำเนินการ</li>
+        <li class="nav-link" onclick="loadByStatus('Success')">✅ ดำเนินการแล้ว</li>
     </ul>
     <hr>
     <button class="btn btn-info btn-sm text-white mb-2" onclick="showDashboard()">📊 แดสบอร์ดสรุปผล</button>
@@ -101,7 +106,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoIVDachZpGOsO8gyjMSS1zkpMS0xgAXv65wWOH5hqwwqQN52OB-302NeyeXlkm4cQ/exec"; 
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyGpnApKlOWAW3pLFVAEkj_zIFSX73S7StrhMXPcXKJS_bUgzQEFerh095xLLr4PiZl/exec"; 
     var currentGroup = 0;
 
     function setGroup(id) {
@@ -253,39 +258,37 @@ function showDashboard() {
     }
 
     function loadPresentationData(groupId) {
-        const tableBody = document.getElementById('presentation-table');
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center">กำลังดึงข้อมูล...</td></tr>';
+    const tableBody = document.getElementById('presentation-table');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังดึงข้อมูล...</td></tr>';
 
-        fetch(SCRIPT_URL + "?action=read&group=" + groupId)
-        .then(res => res.json())
-        .then(data => {
-            tableBody.innerHTML = '';
-            if (!data || data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">ไม่พบประวัติการตรวจของกลุ่มนี้</td></tr>';
-                return;
-            }
-            
-            data.forEach(item => {
-                let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
-                let photoHtml = (item.photo && item.photo !== "ไม่มีรูป") 
-                    ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')">` 
-                    : '<span class="text-muted">ไม่มีรูป</span>';
+    fetch(SCRIPT_URL + "?action=read&group=" + groupId)
+    .then(res => res.json())
+    .then(data => {
+        tableBody.innerHTML = '';
+        if (!data || data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">ไม่พบประวัติของกลุ่มนี้</td></tr>';
+            return;
+        }
+        data.forEach(item => {
+            let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
+            let statusBadge = (item.status === 'Success') 
+                ? '<span class="badge bg-success">✅ เสร็จแล้ว</span>' 
+                : '<span class="badge bg-warning text-dark">⏳ รอแก้ไข</span>';
 
-                tableBody.innerHTML += `
-                    <tr>
-                        <td><b>${item.department}</b></td>
-                        <td><span class="badge ${badgeClass}">${item.type}</span></td>
-                        <td>${item.comment}</td>
-                        <td class="text-center">${photoHtml}</td>
-                    </tr>
-                `;
-            });
-        })
-        .catch(err => {
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ไม่สามารถโหลดข้อมูลได้ หรือยังไม่ได้ Deploy Apps Script เป็นเวอร์ชันใหม่</td></tr>';
+            let photoHtml = (item.photo && item.photo.includes("http")) 
+                ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">` 
+                : '<span class="text-muted">ไม่มีรูป</span>';
+
+            tableBody.innerHTML += `
+                <tr>
+                    <td><b>${item.department}</b><br>${statusBadge}</td>
+                    <td><span class="badge ${badgeClass}">${item.type}</span></td>
+                    <td>${item.comment}</td>
+                    <td class="text-center">${photoHtml}</td>
+                </tr>`;
         });
-    }
-
+    });
+}
     function openFullImage(url) {
         document.getElementById('fullImage').src = url;
         var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
@@ -327,6 +330,54 @@ const toBase64 = file => new Promise((resolve, reject) => {
     reader.onload = () => resolve(reader.result);
     reader.onerror = error => reject(error);
 });
+
+
+    function loadByStatus(status) {
+    // ปิดหน้าฟอร์มบันทึกข้อมูลโชว์แค่ตาราง
+    document.getElementById('setup-info').style.display = 'none';
+    document.getElementById('inspect-form').style.display = 'block';
+    
+    // ซ่อนส่วนบันทึกข้อมูล (Card) เพราะเราจะดูแค่รายการ
+    const cardInput = document.querySelector('.card.p-3.mb-3');
+    if(cardInput) cardInput.style.display = 'none';
+
+    const tableBody = document.getElementById('presentation-table');
+    document.getElementById('display-group').innerText = (status === 'Pending') ? 'รายการรอดำเนินการทั้งหมด' : 'รายการดำเนินการแล้วทั้งหมด';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-primary">🔄 กำลังดึงข้อมูล...</td></tr>';
+
+    // ดึงข้อมูลทั้งหมดมา กรองตาม Status
+    fetch(SCRIPT_URL + "?action=read_all") 
+    .then(res => res.json())
+    .then(data => {
+        tableBody.innerHTML = '';
+        let filteredData = data.filter(item => item.status === status);
+        
+        if (filteredData.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">ไม่พบรายการ${status === 'Pending' ? 'รอดำเนินการ' : 'ที่เสร็จแล้ว'}</td></tr>`;
+            return;
+        }
+
+        filteredData.forEach(item => {
+            let badgeClass = (item.type === 'Safety') ? 'bg-danger' : 'bg-primary';
+            let statusBadge = (item.status === 'Success') 
+                ? '<span class="badge bg-success">✅ เสร็จแล้ว</span>' 
+                : '<span class="badge bg-warning text-dark">⏳ รอแก้ไข</span>';
+
+            let photoHtml = (item.photo && item.photo.includes("http")) 
+                ? `<img src="${item.photo}" class="img-preview" onclick="openFullImage('${item.photo}')" referrerpolicy="no-referrer">` 
+                : '<span class="text-muted">ไม่มีรูป</span>';
+
+            tableBody.innerHTML += `
+                <tr>
+                    <td><b>${item.department}</b><br>${statusBadge}</td>
+                    <td><span class="badge ${badgeClass}">${item.type}</span></td>
+                    <td>${item.comment}</td>
+                    <td class="text-center">${photoHtml}</td>
+                </tr>`;
+        });
+    });
+}
+
     
 </script>
 
